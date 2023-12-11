@@ -57,7 +57,7 @@ def train_maicq_system(
     # GLOBAL Variables
     NUM_ACTS = 5
     NUM_AGENTS = 2
-    SEQUENCE_LENGTH = 8
+    SEQUENCE_LENGTH = 20
     SEED = seed
     LR = learning_rate
     BATCH_SIZE = batch_size
@@ -370,8 +370,8 @@ def train_maicq_system(
         sample_sequence_length=SEQUENCE_LENGTH,
     )
     dummy_fbx_state = buffer.init(dummy_flashbax_transition)
-    vault = Vault(dummy_fbx_state, vault_name="ff_ippo", vault_uid="MAV-20448")
-    buffer_state = vault.get_full_buffer((25600 - 5 * 2500, 25600 - 3 * 2500))  # train with last ~5 million timesteps
+    vault = Vault(dummy_fbx_state, vault_name="ff_ippo", vault_uid="rware")
+    buffer_state = vault.get_full_buffer((20608 - 625 , 20608))  # train with last ~5 million timesteps
     buffer_state = transform_buffer_state(buffer_state)
 
     # batch = buffer.sample(buffer_state, rng_key)

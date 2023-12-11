@@ -15,6 +15,7 @@ from absl import flags, app
 import os
 from og_marl.jax.systems.maicq_vault import train_maicq_system
 from og_marl.jax.systems.bc_vault import train_bc_system
+# from og_marl.jax.systems.bc_vault_smax import train_bc_system
 from og_marl.loggers import JsonWriter, WandbLogger
 
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
@@ -22,7 +23,7 @@ os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 FLAGS = flags.FLAGS
 flags.DEFINE_integer("seed", 42, "Seed.")
 flags.DEFINE_integer("num_epochs", 1000, "Number of training steps.")
-flags.DEFINE_integer("batch_size", 512, "Number of training steps.")
+flags.DEFINE_integer("batch_size", 64, "Number of training steps.")
 
 def main(_):
 
@@ -32,7 +33,7 @@ def main(_):
 
     logger = WandbLogger(project="benchmark-jax-og-marl", config=config)
 
-    train_bc_system(logger=logger, num_epochs=FLAGS.num_epochs, batch_size=FLAGS.batch_size)
+    train_maicq_system(logger=logger, num_epochs=FLAGS.num_epochs, batch_size=FLAGS.batch_size)
 
 if __name__ == "__main__":
     app.run(main)

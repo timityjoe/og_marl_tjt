@@ -21,7 +21,9 @@ import flashbax as fbx
 from flashbax.buffers.trajectory_buffer import TrajectoryBufferState
 import optax
 import tree
-
+import jaxmarl
+from jaxmarl.environments.smax import map_name_to_scenario
+from og_marl.jax.jax_marl_wrapper import JaxMarlState, JaxMarlWrapper
 from og_marl.vault import Vault
 import jax.numpy as jnp
 import flashbax as fbx
@@ -52,7 +54,7 @@ def train_bc_system(
     ##################
 
     BATCH_SIZE = batch_size
-    SEQUENCE_LENGTH = 20
+    SEQUENCE_LENGTH = 2
     LR = learning_rate
     LAYER_SIZES = policy_layer_sizes
     GRU_LAYER_SIZE = policy_gru_layer_size
@@ -61,8 +63,8 @@ def train_bc_system(
     SEED = seed
     NUM_EPOCHS = num_epochs
 
-    NUM_ACTS = 5
-    NUM_AGENTS = 2 
+    NUM_ACTS = 10
+    NUM_AGENTS = 5
 
     ##################
     ### End Config ###
@@ -80,7 +82,7 @@ def train_bc_system(
             for layer in dense_layers:
                 x = layer(x)
                 x = nn.relu(x)
-            carry, x = nn.GRUCell(self.gru_hidden_size)(carry, x)
+            # carry, x = nn.GRUCell(self.gru_hidden_size)(carry, x)
 
             # Maybe reinitialise carry
             carry = jnp.where(
@@ -210,12 +212,19 @@ def train_bc_system(
     
     # Create envs
     def make_env():
-        task_config = {"column_height": 8, "shelf_rows": 1, "shelf_columns": 3, "num_agents": 2, "sensor_range": 1, "request_queue_size": 2}
-        generator = RandomGenerator(**task_config)
-        env = jumanji.make("RobotWarehouse-v0", generator=generator)
-        env = RwareWrapper(env)
+        # task_config = {"column_height": 8, "shelf_rows": 1, "shelf_columns": 3, "num_agents": 2, "sensor_range": 1, "request_queue_size": 2}
+        # generator = RandomGenerator(**task_config)
+        # env = jumanji.make("RobotWarehouse-v0", generator=generator)
+        # env = RwareWrapper(env)
+        # env = AgentIDWrapper(env)
+        # env = LogWrapper(env)
+
+        # Placeholder for creating JAXMARL environment.
+        env = JaxMarlWrapper(jaxmarl.make("HeuristicEnemySMAX", scenario=map_name_to_scenario("2s3z")))
         env = AgentIDWrapper(env)
+        # env = GlobalStateWrapper(env)
         env = LogWrapper(env)
+
         return env
 
     ################
@@ -225,13 +234,8 @@ def train_bc_system(
     wandb.init(project="jax-og-marl")
     rng_key = jax.random.PRNGKey(SEED)
 
-    dummy_flashbax_transition = {
-        "done": jnp.zeros((2,), dtype=bool),
-        "action": jnp.zeros((2,), dtype=jnp.int32),
-        "reward": jnp.zeros((2,), dtype=jnp.float32),
-        "observation": jnp.zeros((2, 68,), dtype=jnp.float32),
-        "legal_action_mask": jnp.zeros((2, 5,), dtype=bool),
-    }
+    dummy_flashbax_transition = {'action': jnp.zeros((5,), dtype='int32'), 'done': jnp.zeros((5,), dtype='bool'), 'legal_action_mask': jnp.zeros((5, 10), dtype='float32'), 'observation': jnp.array((5, 114), dtype='float32'), 'reward': jnp.zeros((5,), dtype='float32')}
+    
     buffer = fbx.make_trajectory_buffer(
         # Unused when reload:
         add_batch_size=1,
@@ -243,8 +247,8 @@ def train_bc_system(
         sample_sequence_length=SEQUENCE_LENGTH,
     )
     dummy_fbx_state = buffer.init(dummy_flashbax_transition)
-    vault = Vault(dummy_fbx_state, vault_name="ff_ippo", vault_uid="rware")
-    buffer_state = vault.get_full_buffer((20608 - 6250 * 2 , 20608))  # train with last ~5 million timesteps
+    vault = Vault(dummy_fbx_state, vault_name="ff_ippo", vault_uid="20231208111927")
+    buffer_state = vault.get_full_buffer((25600 - 5 * 2500, 25600 - 3 * 2500))  # train with last ~5 million timesteps
     buffer_state = transform_buffer_state(buffer_state)
 
     dummy_obs = buffer_state.experience["obs"][0,0,0]
