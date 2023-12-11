@@ -38,7 +38,7 @@ setup(
         "requests"
     ],
     extras_require={
-        'jax': ['flashbax', 'optax', "jax", "flax", "orbax-checkpoint"],
+        'jax': ['flashbax', 'optax', "jax", "flax", "orbax-checkpoint", "flashbax @ git+https://github.com/instadeepai/flashbax@feat/vault#egg=flashbax"],
     }
 
 )

@@ -12,27 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Sequence
-import time
 import copy
-import wandb
-import jax
+import time
+from typing import Sequence
+
 import chex
+import flashbax as fbx
+import jax
+import jax.numpy as jnp
+import jax.random as jrand
+import jumanji
 import optax
 import tree
-import jax.numpy as jnp
-from flax import linen as nn
-import flashbax as fbx
+import wandb
 from flashbax.buffers.trajectory_buffer import TrajectoryBufferState
-
-from og_marl.vault import Vault
-import jax.numpy as jnp
-import flashbax as fbx
-import jax.random as jrand
-import jax
-import jumanji
+from flashbax.vault import Vault
+from flax import linen as nn
 from jumanji.environments.routing.robot_warehouse.generator import RandomGenerator
-from og_marl.jax.jumanji_wrappers import AgentIDWrapper, RwareWrapper, LogWrapper
+
+from og_marl.jax.jumanji_wrappers import AgentIDWrapper, LogWrapper, RwareWrapper
+
 
 def train_maicq_system(
     logger,
@@ -352,29 +351,9 @@ def train_maicq_system(
     rng_key = jax.random.PRNGKey(SEED)
 
     # Restore Dataset
-    dummy_flashbax_transition = {
-        "done": jnp.zeros((2,), dtype=bool),
-        "action": jnp.zeros((2,), dtype=jnp.int32),
-        "reward": jnp.zeros((2,), dtype=jnp.float32),
-        "observation": jnp.zeros((2, 68,), dtype=jnp.float32),
-        "legal_action_mask": jnp.zeros((2, 5,), dtype=bool),
-    }
-    buffer = fbx.make_trajectory_buffer(
-        # Unused when reload:
-        add_batch_size=1,
-        max_length_time_axis=SEQUENCE_LENGTH,
-        min_length_time_axis=SEQUENCE_LENGTH,
-        # Important:
-        period=1, # or 1?
-        sample_batch_size=BATCH_SIZE,
-        sample_sequence_length=SEQUENCE_LENGTH,
-    )
-    dummy_fbx_state = buffer.init(dummy_flashbax_transition)
-    vault = Vault(dummy_fbx_state, vault_name="ff_ippo", vault_uid="rware")
-    buffer_state = vault.get_full_buffer((20608 - 625 , 20608))  # train with last ~5 million timesteps
+    vault = Vault(vault_name="ff_ippo", vault_uid="rware")
+    buffer_state = vault.read(percentiles=(50, 100))  # train with 50th to 100th percentile
     buffer_state = transform_buffer_state(buffer_state)
-
-    # batch = buffer.sample(buffer_state, rng_key)
 
     # Make the environment for evaluation
     env = make_env()

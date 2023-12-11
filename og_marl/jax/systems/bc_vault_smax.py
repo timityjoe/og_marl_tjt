@@ -6,35 +6,35 @@
 
 #     http://www.apache.org/licenses/LICENSE-2.0
 
+import time
+
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from typing import Sequence
-import time
-import wandb
+
+import flashbax as fbx
 import jax
 import jax.numpy as jnp
-from flax import linen as nn
-import flashbax as fbx
-from flashbax.buffers.trajectory_buffer import TrajectoryBufferState
+import jax.random as jrand
+import jaxmarl
+import jumanji
 import optax
 import tree
-import jaxmarl
+import wandb
+from flashbax.buffers.trajectory_buffer import TrajectoryBufferState
+from flashbax.vault import Vault
+from flax import linen as nn
 from jaxmarl.environments.smax import map_name_to_scenario
-from og_marl.jax.jax_marl_wrapper import JaxMarlState, JaxMarlWrapper
-from og_marl.vault import Vault
-import jax.numpy as jnp
-import flashbax as fbx
-import jax.random as jrand
-import jax
-import jumanji
 from jumanji.environments.routing.robot_warehouse.generator import RandomGenerator
-from og_marl.jax.jumanji_wrappers import AgentIDWrapper, RwareWrapper, LogWrapper
 
 from og_marl.environments.utils import get_environment
+from og_marl.jax.jax_marl_wrapper import JaxMarlState, JaxMarlWrapper
+from og_marl.jax.jumanji_wrappers import AgentIDWrapper, LogWrapper, RwareWrapper
 from og_marl.jax.tf_dataset_to_flashbax import FlashbaxBufferStore
+
 
 def train_bc_system(
     logger,
@@ -234,21 +234,8 @@ def train_bc_system(
     wandb.init(project="jax-og-marl")
     rng_key = jax.random.PRNGKey(SEED)
 
-    dummy_flashbax_transition = {'action': jnp.zeros((5,), dtype='int32'), 'done': jnp.zeros((5,), dtype='bool'), 'legal_action_mask': jnp.zeros((5, 10), dtype='float32'), 'observation': jnp.array((5, 114), dtype='float32'), 'reward': jnp.zeros((5,), dtype='float32')}
-    
-    buffer = fbx.make_trajectory_buffer(
-        # Unused when reload:
-        add_batch_size=1,
-        max_length_time_axis=SEQUENCE_LENGTH,
-        min_length_time_axis=SEQUENCE_LENGTH,
-        # Important:
-        period=1, # or 1?
-        sample_batch_size=BATCH_SIZE,
-        sample_sequence_length=SEQUENCE_LENGTH,
-    )
-    dummy_fbx_state = buffer.init(dummy_flashbax_transition)
-    vault = Vault(dummy_fbx_state, vault_name="ff_ippo", vault_uid="20231208111927")
-    buffer_state = vault.get_full_buffer((25600 - 5 * 2500, 25600 - 3 * 2500))  # train with last ~5 million timesteps
+    vault = Vault(vault_name="ff_ippo", vault_uid="20231208111927")
+    buffer_state = vault.read(percentiles=(50, 100))
     buffer_state = transform_buffer_state(buffer_state)
 
     dummy_obs = buffer_state.experience["obs"][0,0,0]
