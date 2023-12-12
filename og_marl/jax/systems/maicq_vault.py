@@ -24,12 +24,12 @@ import jax.random as jrand
 import jumanji
 import optax
 import tree
-import wandb
 from flashbax.buffers.trajectory_buffer import TrajectoryBufferState
 from flashbax.vault import Vault
 from flax import linen as nn
 from jumanji.environments.routing.robot_warehouse.generator import RandomGenerator
 
+import wandb
 from og_marl.jax.jumanji_wrappers import AgentIDWrapper, LogWrapper, RwareWrapper
 
 
@@ -55,7 +55,7 @@ def train_maicq_system(
 ):
     # GLOBAL Variables
     NUM_ACTS = 5
-    NUM_AGENTS = 2
+    NUM_AGENTS = 4
     SEQUENCE_LENGTH = 20
     SEED = seed
     LR = learning_rate
@@ -76,7 +76,7 @@ def train_maicq_system(
 
     # Create envs
     def make_env():
-        task_config = {"column_height": 8, "shelf_rows": 1, "shelf_columns": 3, "num_agents": 2, "sensor_range": 1, "request_queue_size": 2}
+        task_config = {"column_height": 8, "shelf_rows": 2, "shelf_columns": 3, "num_agents": 4, "sensor_range": 1, "request_queue_size": 4}
         generator = RandomGenerator(**task_config)
         env = jumanji.make("RobotWarehouse-v0", generator=generator)
         env = RwareWrapper(env)
@@ -351,8 +351,8 @@ def train_maicq_system(
     rng_key = jax.random.PRNGKey(SEED)
 
     # Restore Dataset
-    vault = Vault(vault_name="ff_ippo", vault_uid="rware")
-    buffer_state = vault.read(percentiles=(50, 100))  # train with 50th to 100th percentile
+    vault = Vault(vault_name="ff_ippo_rware_small-4ag", vault_uid="20231212080255")
+    buffer_state = vault.read(percentiles=(80, 100))
     buffer_state = transform_buffer_state(buffer_state)
 
     # Make the environment for evaluation
@@ -362,7 +362,7 @@ def train_maicq_system(
 
     # Initialise Network Parameters
     dummy_obs = buffer_state.experience["obs"][0,0]
-    dummy_done = jnp.array([False,False])
+    dummy_done = jnp.array([False] * NUM_AGENTS)
     dumm_env_state = buffer_state.experience["env_state"][0,0]
     policy = Network(POLICY_LAYER_SIZES, POLICY_GRU_LAYER_SIZE, NUM_ACTS)
     init_policy_carry = policy.initialize_carry(POLICY_GRU_LAYER_SIZE, dummy_obs.shape)
