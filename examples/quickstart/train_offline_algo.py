@@ -30,6 +30,7 @@ flags.DEFINE_string("max_trainer_steps", "10_001", "Max number of trainer steps.
 ### SYSTEM BUILD FUNCTIONS ###
 
 def build_mabc_system(num_agents, num_actions, environment_factory, logger_factory):
+    print("build_mabc_system")
     system = BCSystemBuilder(
         environment_factory=environment_factory,
         logger_factory=logger_factory,
@@ -50,6 +51,7 @@ def build_mabc_system(num_agents, num_actions, environment_factory, logger_facto
     return system
 
 def build_qmix_system(num_agents, num_actions, environment_factory, logger_factory):
+    print("build_qmix_system")
     system = QMIXSystemBuilder(
         environment_factory=environment_factory,
         logger_factory=logger_factory,
@@ -75,6 +77,7 @@ def build_qmix_system(num_agents, num_actions, environment_factory, logger_facto
     return system
 
 def build_maicq_system(num_agents, num_actions, environment_factory, logger_factory):
+    print("build_maicq_system")
     system = MAICQSystemBuilder(
         environment_factory=environment_factory,
         logger_factory=logger_factory,
@@ -116,6 +119,7 @@ def build_maicq_system(num_agents, num_actions, environment_factory, logger_fact
     return system
 
 def build_bcq_system(num_agents, num_actions, environment_factory, logger_factory):
+    print("build_bcq_system")
     system = QMIXBCQSystemBuilder(
         environment_factory=environment_factory,
         logger_factory=logger_factory,
@@ -152,6 +156,7 @@ def build_bcq_system(num_agents, num_actions, environment_factory, logger_factor
     return system
 
 def build_cql_system(num_agents, num_actions, environment_factory, logger_factory):
+    print("build_cql_system")
     system = QMIXCQLSystemBuilder(
         environment_factory=environment_factory,
         logger_factory=logger_factory,
@@ -182,6 +187,7 @@ def build_cql_system(num_agents, num_actions, environment_factory, logger_factor
 def main(_):
 
     # Logger factory
+    print("1) Logger factory")
     logger_factory = functools.partial(
         logger_utils.make_logger,
         directory=FLAGS.base_log_dir,
@@ -192,16 +198,24 @@ def main(_):
     )
 
     # Environment factory
+    print("2) Environment factory")
     environment_factory = functools.partial(DoubleCartPole)
+    print(f" 2a - environment_factory:{environment_factory}")
 
     env = environment_factory()
+    print(f" 2b - env:{env}")
     num_agents = len(env.agents)
+    print(f" 2c - num_agents:{num_agents}")
+
     num_actions = env.num_actions
-    env.close()
-    del env
+    print(f" 2d - num_actions:{num_actions}")
+
+    # env.close()
+    # del env
 
 
     # Offline system
+    print("3) Offline system")
     if FLAGS.algo_name == "bc":
         print("RUNNING MABC")
         system = build_mabc_system(num_agents, num_actions, environment_factory, logger_factory)
@@ -219,8 +233,12 @@ def main(_):
         system = build_cql_system(num_agents, num_actions, environment_factory, logger_factory)
     else:
         raise ValueError("Unrecognised algorithm.")
+    
+    # print(" RUNNING QMIX+BCQ")
+    # system = build_bcq_system(num_agents, num_actions, environment_factory, logger_factory)
 
     # Run System
+    print("4) Run system offline")
     system.run_offline(
         f"./datasets/double_cartpole/",
         shuffle_buffer_size=1000
