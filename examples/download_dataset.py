@@ -14,4 +14,15 @@
 
 from og_marl.offline_dataset import download_and_unzip_dataset
 
-download_and_unzip_dataset("voltage_control", "case33_3min_final", dataset_base_dir="datasets")
+# download_and_unzip_dataset("voltage_control", "case33_3min_final", dataset_base_dir="datasets")
+
+download_and_unzip_dataset("flatland", "3_trains", dataset_base_dir="datasets")
+download_and_unzip_dataset("flatland", "5_trains", dataset_base_dir="datasets")
+
+# download_and_unzip_dataset("smac_v1", "3s5z_vs_3s6z", dataset_base_dir="datasets")
+# download_and_unzip_dataset("smac_v1", "2c_vs_64zg", dataset_base_dir="datasets")
+# download_and_unzip_dataset("smac_v1", "27m_vs_30m", dataset_base_dir="datasets")
+
+# download_and_unzip_dataset("smac_v2", "terran_5_vs_5", dataset_base_dir="datasets")
+# download_and_unzip_dataset("smac_v2", "zerg_5_vs_5", dataset_base_dir="datasets")
+# download_and_unzip_dataset("smac_v2", "terran_10_vs_10", dataset_base_dir="datasets")
