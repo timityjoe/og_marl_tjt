@@ -1,18 +1,4 @@
-# Copyright 2023 InstaDeep Ltd. All rights reserved.
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# limitations under the License.
-"""Wrapper for Pistonball."""
+"""Wraper for Pistonball."""
 from typing import Dict, List
 
 import cv2
@@ -40,12 +26,12 @@ class Pistonball(PettingZooBase):
             return_state_info: return extra state info
         """
         self._environment = pistonball_v6.parallel_env(
-            n_pistons=n_pistons, continuous=True, render_mode="rgb_array"
+            n_pistons=n_pistons, continuous=True
         )
         self.environment_label = "pettingzoo/pistonball"
         # Wrap environment with supersuit pre-process wrappers
         self._environment = supersuit.color_reduction_v0(self._environment, mode="R")
-        self._environment = supersuit.resize_v0(self._environment, x_size=22, y_size=80)
+        self._environment = supersuit.resize_v1(self._environment, x_size=22, y_size=80)
         self._environment = supersuit.dtype_v0(self._environment, dtype="float32")
         self._environment = supersuit.normalize_obs_v0(
             self._environment, env_min=0, env_max=1
@@ -54,6 +40,7 @@ class Pistonball(PettingZooBase):
         self._agents = self._environment.possible_agents
 
         self.num_actions = 1
+        self.num_agents = len(self._agents)
         self.max_trajectory_length = self._environment.unwrapped.max_cycles
 
         self._reset_next_step = True

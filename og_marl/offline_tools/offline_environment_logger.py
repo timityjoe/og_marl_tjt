@@ -5,8 +5,8 @@ import dm_env
 import numpy as np
 import tensorflow as tf
 import tree
-# from mava.adders.reverb.base import Trajectory
-# from mava.specs import MAEnvironmentSpec
+from mava.adders.reverb.base import Trajectory
+from mava.specs import MAEnvironmentSpec
 
 def get_schema(environment):
     environment_spec = MAEnvironmentSpec(environment)

@@ -1,9 +1,9 @@
-pettingzoo==1.22.0
+pettingzoo==1.22.*
 pygame
-supersuit==3.3.4
+supersuit==3.6
 autorom
-numpy
-gym
+numpy~=1.21.4
+gym==0.26.*
 pymunk
 scipy
 opencv-python
