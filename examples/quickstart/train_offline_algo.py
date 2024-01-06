@@ -119,7 +119,7 @@ def build_maicq_system(num_agents, num_actions, environment_factory, logger_fact
     return system
 
 def build_bcq_system(num_agents, num_actions, environment_factory, logger_factory):
-    print("build_bcq_system")
+    print("Creating QMIXBCQSystemBuilder")
     system = QMIXBCQSystemBuilder(
         environment_factory=environment_factory,
         logger_factory=logger_factory,
@@ -147,12 +147,14 @@ def build_bcq_system(num_agents, num_actions, environment_factory, logger_factor
                 tf.nn.softmax,
             ]
         ),
+
         optimizer=snt.optimizers.Adam(1e-3),
         target_update_rate=0.01,
         threshold=0.4,
         batch_size=32,
         add_agent_id_to_obs=True,
     )
+    print("Done!")
     return system
 
 def build_cql_system(num_agents, num_actions, environment_factory, logger_factory):

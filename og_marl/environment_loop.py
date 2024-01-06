@@ -8,6 +8,8 @@ from og_marl.utils.executor_utils import save_video
 import sonnet as snt
 from acme.tf import savers as tf2_savers
 
+from loguru import logger
+
 
 class EnvironmentLoop:
     """A MARL environment loop (adapted from Mava)"""
@@ -198,8 +200,10 @@ class EvaluationEnvironmentLoop:
         if use_best_checkpoint and self._executor._must_checkpoint:
             self._executor.restore_checkpoint()
 
-        if hasattr(self._environment, "battles_won"): # SMAC
-            old_battles_won = self._environment.battles_won
+        # logger.info(f"self._environment:{self._environment}")
+        # Mod by Tim:
+        # if hasattr(self._environment, "battles_won"): # SMAC
+        #     old_battles_won = self._environment.battles_won
 
         # Bookkeeping
         agent_evaluation_episode_returns = {agent: [] for agent in self._environment._agents}
@@ -298,11 +302,12 @@ class EvaluationEnvironmentLoop:
         else:
             self._checkpoint_best(average_return)  # else use return
 
-        if hasattr(self._environment, "battles_won"): # SMAC
-            win_rate = (
-                self._environment.battles_won - old_battles_won
-            ) / self._evaluation_episodes
-            evaluation_logs.update({"evaluator_win_rate": win_rate})
+        # Mod by Tim:
+        # if hasattr(self._environment, "battles_won"): # SMAC
+        #     win_rate = (
+        #         self._environment.battles_won - old_battles_won
+        #     ) / self._evaluation_episodes
+        #     evaluation_logs.update({"evaluator_win_rate": win_rate})
 
         # Log the given results.
         if self._logger is not None:
