@@ -20,6 +20,12 @@ from og_marl.systems.iql.executor import IQLExecutor
 from og_marl.systems.iql.trainer import IQLBCQTrainer, IQLTrainer
 from og_marl.utils.executor_utils import concat_agent_id_to_obs
 
+from loguru import logger as loguru_logger
+# logger.remove()
+# logger.add(sys.stdout, level="INFO")
+# logger.add(sys.stdout, level="SUCCESS")
+# logger.add(sys.stdout, level="WARNING")
+
 
 class IQLSystemBuilder(SystemBuilderBase):
     def __init__(
@@ -339,13 +345,17 @@ class IQLSystemBuilder(SystemBuilderBase):
         dataset_dir,
         shuffle_buffer_size=5000
     ):
+        loguru_logger.info("run_offline()")
+
         # Create logger
         logger = self._logger_factory("trainer")
 
         # Create environment for the offline dataset
+        loguru_logger.info("    1) Create environment for the offline dataset")
         environment = self._environment_factory()
 
         # Build offline dataset
+        loguru_logger.info("    2) Build offline dataset")
         dataset = MAOfflineDataset(
             environment=environment,
             logdir=dataset_dir,
@@ -353,13 +363,15 @@ class IQLSystemBuilder(SystemBuilderBase):
             shuffle_buffer_size=shuffle_buffer_size,
         )
 
+        loguru_logger.info(f"    3) Build trainer - dataset:{dataset}, logger:{logger}")
         trainer = self._build_trainer(dataset, logger)
 
+        loguru_logger.info(f"    4) Build evaluator - trainer:{trainer}")
         evaluator = self.evaluator(trainer)
 
         trainer_steps = 0
+        loguru_logger.info(f"    5) Run Trainer - evaluator:{evaluator}")
         while trainer_steps < self._max_trainer_steps:
-
             trainer_logs = trainer.step()  # logging done in trainer
 
             if trainer_steps % self._evaluation_period == 0:
@@ -370,10 +382,12 @@ class IQLSystemBuilder(SystemBuilderBase):
             trainer_steps += 1
 
         # Final evaluation
+        loguru_logger.info("    6) Run Final evaluation")
         evaluator_logs = evaluator.run_evaluation(
             trainer_steps,
             use_best_checkpoint=True,
         )
+        loguru_logger.info("    7) Done!")
 
     def _get_extra_spec(self):
         q_network = self._initialise_networks()["q_network"]

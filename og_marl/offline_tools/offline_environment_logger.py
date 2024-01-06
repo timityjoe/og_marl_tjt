@@ -8,6 +8,13 @@ import tree
 from mava.adders.reverb.base import Trajectory
 from mava.specs import MAEnvironmentSpec
 
+# Mod by Tim:
+from loguru import logger
+logger.remove()
+# logger.add(sys.stdout, level="INFO")
+# logger.add(sys.stdout, level="SUCCESS")
+# logger.add(sys.stdout, level="WARNING")
+
 def get_schema(environment):
     environment_spec = MAEnvironmentSpec(environment)
     agent_specs = environment_spec.get_agent_specs()
@@ -105,8 +112,8 @@ class WriteSequence:
 
         self.numpy["episode_return"] = np.array(episode_return, dtype="float32")
 
-
 class MAOfflineEnvironmentSequenceLogger:
+# class MAOfflineEnvironmentSequenceLogger(gym.Env):
     def __init__(
         self,
         environment,
@@ -136,6 +143,12 @@ class MAOfflineEnvironmentSequenceLogger:
 
         self._num_writes = 0
         self._timestep_ctr = 0
+
+    # Mod by Tim:
+    def render(self, mode: str = "human"):
+        logger.info(f"render():{mode}, self._environment:{self._environment}")
+        self._environment.render(mode)
+    
 
     def reset(self) -> Tuple[dm_env.TimeStep, Dict]:
         """Resets the env and log the first timestep.

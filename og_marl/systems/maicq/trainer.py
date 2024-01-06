@@ -15,6 +15,12 @@ from og_marl.utils.trainer_utils import (
     gather
 )
 
+from loguru import logger as loguru_logger
+# logger.remove()
+# logger.add(sys.stdout, level="INFO")
+# logger.add(sys.stdout, level="SUCCESS")
+# logger.add(sys.stdout, level="WARNING")
+
 class MAICQTrainer(TrainerBase):
     def __init__(
         self,
@@ -73,6 +79,8 @@ class MAICQTrainer(TrainerBase):
 
     @tf.function()
     def _train(self, sample, trainer_step):
+        loguru_logger.info(f"MAICQTrainer::_train() - sample:{sample} trainer_step:{trainer_step}")
+
 
         # Batch agent inputs together
         batch = sample_batch_agents(self._agents, sample)

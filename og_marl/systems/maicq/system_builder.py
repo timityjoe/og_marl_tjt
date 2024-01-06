@@ -11,6 +11,11 @@ from og_marl.systems.maicq.trainer import MAICQTrainer
 from og_marl.systems.system_builder_base import SystemBuilderBase
 from og_marl.utils.executor_utils import concat_agent_id_to_obs
 
+from loguru import logger as loguru_logger
+# logger.remove()
+# logger.add(sys.stdout, level="INFO")
+# logger.add(sys.stdout, level="SUCCESS")
+# logger.add(sys.stdout, level="WARNING")
 
 class MAICQSystemBuilder(SystemBuilderBase):
     """Muti-Agent Implicit Constrained Q-Learning.
@@ -103,13 +108,17 @@ class MAICQSystemBuilder(SystemBuilderBase):
         dataset_dir,
         shuffle_buffer_size=5000
     ):
+        
         # Create logger
+        loguru_logger.info("    1) Create logger")
         logger = self._logger_factory("trainer")
 
         # Create environment for the offline dataset
+        loguru_logger.info("    2) Create environment")
         environment = self._environment_factory()
 
         # Build offline dataset
+        loguru_logger.info("    3) Build offline dataset")
         dataset = MAOfflineDataset(
             environment=environment,
             logdir=dataset_dir,
@@ -117,11 +126,14 @@ class MAICQSystemBuilder(SystemBuilderBase):
             shuffle_buffer_size=shuffle_buffer_size,
         )
 
+        loguru_logger.info("    4) Build Trainer")
         trainer = self._build_trainer(dataset, logger)
 
+        loguru_logger.info("    5) Build Evaluator")
         evaluator = self.evaluator(trainer)
 
         trainer_steps = 0
+        loguru_logger.info(f"    6) Run Trainer")
         while trainer_steps < self._max_trainer_steps:
 
             trainer_logs = trainer.step()  # logging done in trainer
@@ -133,11 +145,13 @@ class MAICQSystemBuilder(SystemBuilderBase):
 
             trainer_steps += 1
 
-        # Final evaluation
+        # Final evaluation - Goes to environment_loop.py
+        loguru_logger.info("    7) Final evaluation ")
         evaluator_logs = evaluator.run_evaluation(
             trainer_steps,
             use_best_checkpoint=True,
         )
+        loguru_logger.info(f"    8) Done! - evaluator_logs:{evaluator_logs}")
 
     def _build_executor(self, trainer):
 

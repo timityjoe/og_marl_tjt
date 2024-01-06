@@ -12,6 +12,12 @@ from mava.adders.reverb.base import Step
 
 from og_marl.offline_tools.offline_environment_logger import get_schema
 
+from loguru import logger
+# logger.remove()
+# logger.add(sys.stdout, level="INFO")
+# logger.add(sys.stdout, level="SUCCESS")
+# logger.add(sys.stdout, level="WARNING")
+
 class MAOfflineDataset:
     def __init__(
         self,
@@ -22,6 +28,10 @@ class MAOfflineDataset:
         return_pytorch_tensors=False,
     ):
         self._environment = environment
+
+        # Mod by Tim:
+        logger.info(f"environment:{environment}")
+
         self._schema = get_schema(environment)
         self._spec = MAEnvironmentSpec(environment)
         self._agents = self._spec.get_agent_ids()

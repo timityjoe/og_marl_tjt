@@ -9,6 +9,10 @@ import sonnet as snt
 from acme.tf import savers as tf2_savers
 
 from loguru import logger
+logger.remove()
+# logger.add(sys.stdout, level="INFO")
+# logger.add(sys.stdout, level="SUCCESS")
+# logger.add(sys.stdout, level="WARNING")
 
 
 class EnvironmentLoop:
@@ -38,8 +42,9 @@ class EnvironmentLoop:
             self._frames = []
             self._recordings_path = logger._path("recordings")
 
-    def run_episode(self):
+    def run_episode(self, render_env: bool = True):
         """Run one episode."""
+        logger.info("run_episode()")
 
         # Reset counters
         start_time = time.time()
@@ -62,6 +67,12 @@ class EnvironmentLoop:
         while not timestep.last():
             # Get agent actions from executor
             actions = self._executor.select_actions(timestep.observation)
+
+            # Mod by Tim: Render. self._environment is MAOfflineEnvironmentSequenceLogger
+            if (render_env):
+                logger.info(f"render() self._environment:{self._environment}")  
+                # self._environment._environment.render("human")
+                self._environment.render(mode="human")
 
             # Step the environment
             timestep, extras = self._environment.step(actions)
@@ -132,6 +143,7 @@ class EnvironmentLoop:
             logs = self.run_episode()
 
 
+
 class EvaluationEnvironmentLoop:
     """Environmentloop purposfully built for evaluation."""
     def __init__(
@@ -191,6 +203,7 @@ class EvaluationEnvironmentLoop:
     def run_evaluation(
         self, trainer_steps, use_best_checkpoint=False
     ):
+        logger.info("run_evaluation")
         """Run evaluation"""
 
         # Get latest variables from trainer
@@ -233,6 +246,12 @@ class EvaluationEnvironmentLoop:
             while not timestep.last():
 
                 actions = self._executor.select_actions(timestep.observation)
+
+                # Mod by Tim: Render. self._environment is MAOfflineEnvironmentSequenceLogger
+                if True:
+                    # logger.info(f"render() self._environment:{self._environment}")  
+                    # self._environment._environment.render("human")
+                    self._environment.render(mode="human")
 
                 # Step the environment
                 timestep, extras = self._environment.step(actions)

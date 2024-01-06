@@ -9,16 +9,24 @@ We defined the DoubleCartPole environment in `examples/quickstart/double_cartpol
 """
 
 from .double_cartpole import DoubleCartPole
+from loguru import logger
+logger.remove()
+# logger.add(sys.stdout, level="INFO")
+# logger.add(sys.stdout, level="SUCCESS")
+# logger.add(sys.stdout, level="WARNING")
 
-marl_env = DoubleCartPole()
+logger.info("1) Create DoubleCartPole env")
+# marl_env = DoubleCartPole()
+double_cart_pole_env = DoubleCartPole()
 
 """PART 2: In Order to record experiences in our new environment we must wrap
 it in the offline utility provided by OG-MARL."""
 
 from og_marl.offline_tools.offline_environment_logger import MAOfflineEnvironmentSequenceLogger
 
+logger.info("2) Create MAOfflineEnvironmentSequenceLogger")
 marl_env = MAOfflineEnvironmentSequenceLogger(
-    environment=marl_env,
+    environment=double_cart_pole_env,
     sequence_length=5,
     period=5,
     logdir="./datasets/double_cartpole",
@@ -68,9 +76,13 @@ env_loop = EnvironmentLoop(
     logger=None,
     )
 
+
 NUM_EPISODES = 3000
+logger.info("3) Running loops for NUM_EPISODES:{NUM_EPISODES} times")
 for e in range(NUM_EPISODES):
-    env_loop.run_episode()
+    # render_env = True
+    render_env = False
+    env_loop.run_episode(render_env)
     if e % 100 == 0:
         print(f"{e} Episodes Done.")
 

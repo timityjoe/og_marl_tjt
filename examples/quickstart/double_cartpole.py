@@ -10,6 +10,12 @@ from mava.utils.wrapper_utils import parameterized_restart
 go to `examples/quickstart/generate_dataset.py` to get started with the 
 tutorial."""
 
+from loguru import logger
+logger.remove()
+# logger.add(sys.stdout, level="INFO")
+# logger.add(sys.stdout, level="SUCCESS")
+# logger.add(sys.stdout, level="WARNING")
+
 class DoubleCartPole(BaseEnvironment):
 
     def __init__(self):
@@ -20,8 +26,17 @@ class DoubleCartPole(BaseEnvironment):
         self.possible_agents = self.agents
         self._agents = self.agents
 
+        # Mod by Tim:
         self._env1 = gym.make("CartPole-v1")
         self._env2 = gym.make("CartPole-v1")
+        # self._env1 = gym.make("CartPole-v1", render_mode='human')
+        # self._env2 = gym.make("CartPole-v1", render_mode='human')
+
+    # Mod by Tim:
+    def render(self, mode: str = "human"):
+        # logger.info("render()")
+        self._env1.render(mode)
+        self._env1.render(mode)
 
     def reset(self):
         # Reset the environment

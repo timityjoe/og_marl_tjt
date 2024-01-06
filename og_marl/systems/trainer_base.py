@@ -4,6 +4,11 @@ from acme.tf import utils as tf2_utils
 import launchpad as lp
 import abc
 
+from loguru import logger as loguru_logger
+# logger.remove()
+# logger.add(sys.stdout, level="INFO")
+# logger.add(sys.stdout, level="SUCCESS")
+# logger.add(sys.stdout, level="WARNING")
 
 class TrainerBase(abc.ABC):
     def __init__(
@@ -45,6 +50,8 @@ class TrainerBase(abc.ABC):
         return self._trainer_step_counter
 
     def step(self):
+        # loguru_logger.info("step()")
+
         self.before_train_step()
 
         if (

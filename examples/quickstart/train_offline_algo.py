@@ -11,6 +11,13 @@ from og_marl.systems.bc import BCSystemBuilder
 
 from .double_cartpole import DoubleCartPole
 
+import sys
+from loguru import logger
+# logger.remove()
+logger.add(sys.stdout, level="INFO")
+# logger.add(sys.stdout, level="SUCCESS")
+# logger.add(sys.stdout, level="WARNING")
+
 """PART 6: This is part 6 of the tutorial on how to use OG-MARL. Make 
 sure you did parts 1-5 in `example/quickstart/generate_dataset.py` before 
 doing this.
@@ -51,7 +58,7 @@ def build_mabc_system(num_agents, num_actions, environment_factory, logger_facto
     return system
 
 def build_qmix_system(num_agents, num_actions, environment_factory, logger_factory):
-    print("build_qmix_system")
+    logger.info("build_qmix_system")
     system = QMIXSystemBuilder(
         environment_factory=environment_factory,
         logger_factory=logger_factory,
@@ -77,7 +84,7 @@ def build_qmix_system(num_agents, num_actions, environment_factory, logger_facto
     return system
 
 def build_maicq_system(num_agents, num_actions, environment_factory, logger_factory):
-    print("build_maicq_system")
+    logger.info("build_maicq_system")
     system = MAICQSystemBuilder(
         environment_factory=environment_factory,
         logger_factory=logger_factory,
@@ -119,7 +126,7 @@ def build_maicq_system(num_agents, num_actions, environment_factory, logger_fact
     return system
 
 def build_bcq_system(num_agents, num_actions, environment_factory, logger_factory):
-    print("Creating QMIXBCQSystemBuilder")
+    logger.info("Creating QMIXBCQSystemBuilder")
     system = QMIXBCQSystemBuilder(
         environment_factory=environment_factory,
         logger_factory=logger_factory,
@@ -154,11 +161,11 @@ def build_bcq_system(num_agents, num_actions, environment_factory, logger_factor
         batch_size=32,
         add_agent_id_to_obs=True,
     )
-    print("Done!")
+    logger.info("Done!")
     return system
 
 def build_cql_system(num_agents, num_actions, environment_factory, logger_factory):
-    print("build_cql_system")
+    logger.info("build_cql_system")
     system = QMIXCQLSystemBuilder(
         environment_factory=environment_factory,
         logger_factory=logger_factory,
@@ -189,7 +196,7 @@ def build_cql_system(num_agents, num_actions, environment_factory, logger_factor
 def main(_):
 
     # Logger factory
-    print("1) Logger factory")
+    logger.info("1) Logger factory")
     logger_factory = functools.partial(
         logger_utils.make_logger,
         directory=FLAGS.base_log_dir,
@@ -200,38 +207,38 @@ def main(_):
     )
 
     # Environment factory
-    print("2) Environment factory")
+    logger.info("2) Environment factory")
     environment_factory = functools.partial(DoubleCartPole)
-    print(f" 2a - environment_factory:{environment_factory}")
+    logger.info(f" 2a - environment_factory:{environment_factory}")
 
     env = environment_factory()
-    print(f" 2b - env:{env}")
+    logger.info(f" 2b - env:{env}")
     num_agents = len(env.agents)
-    print(f" 2c - num_agents:{num_agents}")
+    logger.info(f" 2c - num_agents:{num_agents}")
 
     num_actions = env.num_actions
-    print(f" 2d - num_actions:{num_actions}")
+    logger.info(f" 2d - num_actions:{num_actions}")
 
     # env.close()
     # del env
 
 
     # Offline system
-    print("3) Offline system")
+    logger.info("3) Offline system")
     if FLAGS.algo_name == "bc":
-        print("RUNNING MABC")
+        logger.info("RUNNING MABC")
         system = build_mabc_system(num_agents, num_actions, environment_factory, logger_factory)
     elif FLAGS.algo_name == "maicq":
-        print("RUNNING MAICQ")
+        logger.info("RUNNING MAICQ")
         system = build_maicq_system(num_agents, num_actions, environment_factory, logger_factory)
     elif FLAGS.algo_name == "qmix":
-        print("RUNNING QMIX")
+        logger.info("RUNNING QMIX")
         system = build_qmix_system(num_agents, num_actions, environment_factory, logger_factory)
     elif FLAGS.algo_name == "qmix+bcq":
-        print("RUNNING QMIX+BCQ")
+        logger.info("RUNNING QMIX+BCQ")
         system = build_bcq_system(num_agents, num_actions, environment_factory, logger_factory)
     elif FLAGS.algo_name == "qmix+cql":
-        print("RUNNING QMIX+CQL")
+        logger.info("RUNNING QMIX+CQL")
         system = build_cql_system(num_agents, num_actions, environment_factory, logger_factory)
     else:
         raise ValueError("Unrecognised algorithm.")
@@ -240,7 +247,13 @@ def main(_):
     # system = build_bcq_system(num_agents, num_actions, environment_factory, logger_factory)
 
     # Run System
-    print("4) Run system offline")
+    logger.info("4) Run system offline - 1st run")
+    system.run_offline(
+        f"./datasets/double_cartpole/",
+        shuffle_buffer_size=1000
+    )
+
+    logger.info("4) Run system offline - 2nd run")
     system.run_offline(
         f"./datasets/double_cartpole/",
         shuffle_buffer_size=1000

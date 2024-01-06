@@ -12,6 +12,12 @@ from og_marl.utils.trainer_utils import (
     sample_batch_agents
 )
 
+from loguru import logger as loguru_logger
+# logger.remove()
+# logger.add(sys.stdout, level="INFO")
+# logger.add(sys.stdout, level="SUCCESS")
+# logger.add(sys.stdout, level="WARNING")
+
 class QmixTrainer(IQLTrainer):
     def __init__(
         self,
@@ -128,6 +134,8 @@ class QmixBcqTrainer(QmixTrainer):
 
     @tf.function
     def _train(self, sample, trainer_step):
+        loguru_logger.info(f"QmixBcqTrainer::_train() - sample:{sample} trainer_step:{trainer_step}")
+
         batch = self._batch_agents(self._agents, sample)
 
         # Get the relevant quantities
@@ -323,6 +331,8 @@ class QmixCqlTrainer(QmixTrainer):
 
     @tf.function
     def _train(self, sample, trainer_step):
+        loguru_logger.info("QmixCqlTrainer::_train()")
+
         batch = self._batch_agents(self._agents, sample)
 
         # Get the relevant quantities

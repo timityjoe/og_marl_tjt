@@ -40,8 +40,8 @@ python3 -m examples.baselines.run_pistonball --algo_name=bc --dataset_quality=Go
 
 # Run quickstart examples
 python3 -m examples.quickstart.generate_dataset
-python3 -m examples.quickstart.train_offline_algo --algo_name=maicq
 python3 -m examples.quickstart.train_offline_algo --algo_name=qmix+bcq
+python3 -m examples.quickstart.train_offline_algo --algo_name=maicq
 
 
 # Start Tensorboard
