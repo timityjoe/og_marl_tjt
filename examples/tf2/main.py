@@ -19,6 +19,12 @@ from og_marl.tf2.utils import get_system, set_growing_gpu_memory
 from og_marl.loggers import JsonWriter, WandbLogger
 from og_marl.offline_dataset import OfflineMARLDataset
 
+from loguru import logger as loguru_logger
+# loguru_logger.remove()
+# loguru_logger.add(sys.stdout, level="INFO")
+# loguru_logger.add(sys.stdout, level="SUCCESS")
+# loguru_logger.add(sys.stdout, level="WARNING")
+
 set_growing_gpu_memory()
 
 FLAGS = flags.FLAGS
@@ -41,6 +47,8 @@ def main(_):
     }
 
     env = get_environment(FLAGS.env, FLAGS.scenario)
+
+    loguru_logger.info(f"datasets/{FLAGS.env}/{FLAGS.scenario}/{FLAGS.dataset}")
 
     dataset = OfflineMARLDataset(env, f"datasets/{FLAGS.env}/{FLAGS.scenario}/{FLAGS.dataset}")
     dataset_sequence_length = dataset.get_sequence_length()
