@@ -21,6 +21,7 @@ pip install opencv-python
 pip install https://github.com/instadeepai/Mava/archive/refs/tags/0.1.2.zip
 pip install docker_pycreds appdirs
 pip install sentry-sdk==1.0.0 setproctitle
+pip install wandb
 pip3 install numpy --upgrade
 
 
@@ -37,6 +38,7 @@ python3 -m examples.baselines.run_pistonball --algo_name=qmix --dataset_quality=
 
 # Run examples (og_marl_new)
 # See https://github.com/instadeepai/og-marl
+# Dataset path in following manner: /datasets/flatland/5_trains/Replay
 python examples/<backend>/main.py --system=<system_name> --env=<env_name> --scenario=<scenario_name>
 python examples/tf2/main.py --system=idrqn --env=flatland --scenario=3_trains
 python3 -m examples.tf2.main --system=idrqn --env=flatland --scenario=5_trains
