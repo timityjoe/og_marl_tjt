@@ -15,7 +15,11 @@
 import numpy as np
 import time
 
-from og_marl.loggers import JsonWriter
+from og_marl_tjt_old.og_marl.loggers import JsonWriter
+
+# Mod by Tim:
+import jax
+from jax import random
 
 class BaseMARLSystem:
     def __init__(
@@ -72,7 +76,11 @@ class BaseMARLSystem:
         episodes = 0
         while True: # breaks out when env_steps > max_env_steps
             self.reset() # reset the system
-            observations = self._environment.reset()
+
+            # Mod by Tim: TODO Resolve random key input, to reset(key)
+            # observations = self._environment.reset()
+            state_key, action_key1, action_key2 = random.split(random.PRNGKey(10), 3)
+            observations = self._environment.reset(state_key)
 
             if isinstance(observations, tuple):
                 observations, infos = observations

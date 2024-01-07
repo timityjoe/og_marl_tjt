@@ -18,8 +18,8 @@ import tensorflow as tf
 import sonnet as snt
 import tree
 
-from og_marl.tf2.systems.base import BaseMARLSystem
-from og_marl.tf2.utils import (
+from og_marl_tjt_old.og_marl.tf2.systems.base import BaseMARLSystem
+from og_marl_tjt_old.og_marl.tf2.utils import (
     batched_agents,
     gather,
     batch_concat_agent_id_to_obs,
