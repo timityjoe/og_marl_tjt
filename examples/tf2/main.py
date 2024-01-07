@@ -16,7 +16,7 @@ from absl import flags, app
 from og_marl.environments.utils import get_environment
 from og_marl.replay_buffers import SequenceCPPRB
 from og_marl.tf2.utils import get_system, set_growing_gpu_memory
-from og_marl.loggers import JsonWriter, WandbLogger
+from og_marl.loggers import JsonWriter, WandbLogger, TerminalLogger
 from og_marl.offline_dataset import OfflineMARLDataset
 
 from loguru import logger as loguru_logger
@@ -58,6 +58,7 @@ def main(_):
     batched_dataset.populate_from_dataset(dataset)
 
     logger = WandbLogger(project="tf2-og-marl", config=config)
+    # logger = TerminalLogger()
 
     json_writer = JsonWriter("logs", f"tf2+{FLAGS.system}", f"{FLAGS.scenario}_{FLAGS.dataset}", FLAGS.env, FLAGS.seed)
 

@@ -18,8 +18,8 @@ import tensorflow as tf
 import sonnet as snt
 import tree
 
-from og_marl_tjt_old.og_marl.tf2.systems.base import BaseMARLSystem
-from og_marl_tjt_old.og_marl.tf2.utils import (
+from og_marl.tf2.systems.base import BaseMARLSystem
+from og_marl.tf2.utils import (
     batched_agents,
     gather,
     batch_concat_agent_id_to_obs,
@@ -91,6 +91,7 @@ class IDRQNSystem(BaseMARLSystem):
 
         # Reset the recurrent neural network
         loguru_logger.info(f"self._environment.possible_agents:{self._environment.possible_agents}")
+        loguru_logger.info(f"self._q_network.initial_state(1):{self._q_network.initial_state(1)}")
         self._rnn_states = {agent: self._q_network.initial_state(1) for agent in self._environment.possible_agents}
 
     def reset(self):
