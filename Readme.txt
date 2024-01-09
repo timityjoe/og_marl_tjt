@@ -45,6 +45,7 @@ python3 -m examples.baselines.run_pistonball --algo_name=qmix --dataset_quality=
 python examples/<backend>/main.py --system=<system_name> --env=<env_name> --scenario=<scenario_name>
 python3 -m examples.tf2.main --system=idrqn --env=flatland --scenario=5_trains
 python3 -m examples.tf2.main --system=idrqn --env=smac_v1 --scenario=3m
+python3 -m examples.tf2.main --system=idrqn --env=smac_v1 --scenario=3s5z_vs_3s6z
 
 
 # Start Tensorboard
