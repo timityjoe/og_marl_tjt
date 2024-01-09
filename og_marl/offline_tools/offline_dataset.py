@@ -12,6 +12,12 @@ from mava.adders.reverb.base import Step
 
 from og_marl.offline_tools.offline_environment_logger import get_schema
 
+from loguru import logger as loguru_logger
+# loguru_logger.remove()
+# loguru_logger.add(sys.stdout, level="INFO")
+# loguru_logger.add(sys.stdout, level="SUCCESS")
+# loguru_logger.add(sys.stdout, level="WARNING")
+
 class MAOfflineDataset:
     def __init__(
         self,
@@ -28,9 +34,14 @@ class MAOfflineDataset:
         self._return_pytorch_tensors = return_pytorch_tensors
 
         file_path = Path(logdir)
+        loguru_logger.info(f"file_path:{file_path}")
+
         filenames = [
             str(file_name) for file_name in file_path.glob("**/*.tfrecord")
         ]
+
+        loguru_logger.info(f"filenames:{filenames}")
+
         filename_dataset = tf.data.Dataset.from_tensor_slices(filenames)
         self._no_repeat_dataset = filename_dataset.interleave(
             lambda x: tf.data.TFRecordDataset(x, compression_type="GZIP").map(
