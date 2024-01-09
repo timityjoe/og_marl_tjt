@@ -28,8 +28,12 @@ class SequenceCPPRB:
         cpprb_env_dict = {}
         sequence_buffer = {}
         for agent in environment.possible_agents:
-            obs_shape = self._environment.observation_spaces[agent].shape
-            act_shape = self._environment.action_spaces[agent].shape
+            # Mod by Tim: TODO yet to solve (see robot_warehouse env.py)
+            # 
+            # obs_shape = self._environment.observation_spaces[agent].shape
+            # act_shape = self._environment.action_spaces[agent].shape
+            obs_shape = (1,4)
+            act_shape = (1,4)
 
             cpprb_env_dict[f"{agent}_observations"] = {"shape": (sequence_length, *obs_shape)}
             cpprb_env_dict[f"{agent}_actions"] = {"shape": (sequence_length, *act_shape)}

@@ -8,32 +8,55 @@ import tree
 # from mava.adders.reverb.base import Trajectory
 # from mava.specs import MAEnvironmentSpec
 
-def get_schema(environment):
-    environment_spec = MAEnvironmentSpec(environment)
-    agent_specs = environment_spec.get_agent_specs()
-
+# Mod by Tim: TODO
+def get_schema_dtypes(environment):
     schema = {}
-    for agent in environment_spec.get_agent_ids():
-        spec = agent_specs[agent]
-
-        schema[agent + "_observations"] = spec.observations.observation
-        schema[agent + "_legal_actions"] = spec.observations.legal_actions
-        schema[agent + "_actions"] = spec.actions
-        schema[agent + "_rewards"] = spec.rewards
-        schema[agent + "_discounts"] = spec.discounts
+    for agent in environment.possible_agents:
+        agent_str = str(agent)
+        schema[agent_str + "_observations"] = tf.float32
+        schema[agent_str + "_legal_actions"] = tf.float32
+        schema[agent_str + "_actions"] = tf.int64
+        schema[agent_str + "_rewards"] = tf.float32
+        schema[agent_str + "_discounts"] = tf.float32
 
     ## Extras
     # Zero-padding mask
-    schema["zero_padding_mask"] = np.array(1, dtype=np.float32)
+    schema["zero_padding_mask"] = tf.float32
 
-    # Global env state
-    extras_spec = environment_spec.get_extra_specs()
-    if "s_t" in extras_spec:
-        schema["env_state"] = extras_spec["s_t"]
+    # Env state
+    schema["env_state"] = tf.float32
 
-    schema["episode_return"] = np.array(0, dtype="float32")
+    # Episode return
+    schema["episode_return"] = tf.float32
 
     return schema
+
+# def get_schema(environment):
+#     environment_spec = MAEnvironmentSpec(environment)
+#     agent_specs = environment_spec.get_agent_specs()
+
+#     schema = {}
+#     for agent in environment_spec.get_agent_ids():
+#         spec = agent_specs[agent]
+
+#         schema[agent + "_observations"] = spec.observations.observation
+#         schema[agent + "_legal_actions"] = spec.observations.legal_actions
+#         schema[agent + "_actions"] = spec.actions
+#         schema[agent + "_rewards"] = spec.rewards
+#         schema[agent + "_discounts"] = spec.discounts
+
+#     ## Extras
+#     # Zero-padding mask
+#     schema["zero_padding_mask"] = np.array(1, dtype=np.float32)
+
+#     # Global env state
+#     extras_spec = environment_spec.get_extra_specs()
+#     if "s_t" in extras_spec:
+#         schema["env_state"] = extras_spec["s_t"]
+
+#     schema["episode_return"] = np.array(0, dtype="float32")
+
+#     return schema
 
 class WriteSequence:
     def __init__(self, schema, sequence_length):
@@ -117,7 +140,7 @@ class MAOfflineEnvironmentSequenceLogger:
         min_sequences_per_file: int = 100000,
     ):
         self._environment = environment
-        self._schema = get_schema(self._environment)
+        self._schema = get_schema_dtypes(self._environment)
 
         self._active_buffer = []
         self._write_buffer = []
