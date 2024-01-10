@@ -3,6 +3,10 @@
 # https://github.com/instadeepai/og-marl
 # https://sites.google.com/view/og-marl (download old project files from here)
 
+# FAQ
+"TypeError: The `filenames` argument must contain `tf.string` elements. Got `tf.float32` elements."
+- Dataset path in following manner: /datasets/flatland/5_trains/Replay
+
 # Conda Setup
 conda init bash
 conda create --name conda39-jumanji python=3.9
@@ -16,13 +20,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 bash install_environments/flatland.sh
 bash install_environments/smacv1.sh
 bash install_environments/smacv2.sh
-pip install dm-sonnet
-pip install cpprb
-pip install opencv-python
 pip install https://github.com/instadeepai/Mava/archive/refs/tags/0.1.2.zip
-pip install docker_pycreds appdirs
-pip install sentry-sdk==1.0.0 setproctitle
-pip install wandb
 pip3 install numpy --upgrade
 
 
@@ -45,7 +43,7 @@ python3 -m examples.baselines.run_pistonball --algo_name=qmix --dataset_quality=
 python examples/<backend>/main.py --system=<system_name> --env=<env_name> --scenario=<scenario_name>
 python3 -m examples.tf2.main --system=idrqn --env=flatland --scenario=5_trains
 python3 -m examples.tf2.main --system=idrqn --env=smac_v1 --scenario=3m
-python3 -m examples.tf2.main --system=idrqn --env=smac_v1 --scenario=3s5z_vs_3s6z
+python3 -m examples.tf2.main --system=idrqn --env=smac_v1 --scenario=8m
 
 
 # Start Tensorboard
