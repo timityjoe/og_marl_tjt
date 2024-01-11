@@ -16,6 +16,12 @@ import numpy as np
 import cpprb
 import tree
 
+from loguru import logger as loguru_logger
+# loguru_logger.remove()
+# loguru_logger.add(sys.stdout, level="INFO")
+# loguru_logger.add(sys.stdout, level="SUCCESS")
+# loguru_logger.add(sys.stdout, level="WARNING")
+
 class SequenceCPPRB:
 
     def __init__(self, environment, sequence_length=20, max_size=10_000, batch_size=32):
@@ -30,10 +36,10 @@ class SequenceCPPRB:
         for agent in environment.possible_agents:
             # Mod by Tim: TODO yet to solve (see robot_warehouse env.py)
             # 
-            # obs_shape = self._environment.observation_spaces[agent].shape
-            # act_shape = self._environment.action_spaces[agent].shape
-            obs_shape = (1,4)
-            act_shape = (1,4)
+            obs_shape = self._environment.observation_spaces[agent].shape
+            act_shape = self._environment.action_spaces[agent].shape
+            # obs_shape = (1,4)
+            # act_shape = (1,4)
 
             cpprb_env_dict[f"{agent}_observations"] = {"shape": (sequence_length, *obs_shape)}
             cpprb_env_dict[f"{agent}_actions"] = {"shape": (sequence_length, *act_shape)}
@@ -104,11 +110,19 @@ class SequenceCPPRB:
         self._t = 0
 
     def populate_from_dataset(self, dataset):
+
+        # Mod by Tim: Increase the value, for datasets larger than 128
+        # TODO: Find a way to solve this elegantly
+        # dataset = dataset.batch(128)
         dataset = dataset.batch(128)
+        # loguru_logger.info(f"dataset:{dataset}")
+
         for batch in dataset:
             batch = tree.map_structure(lambda x: x.numpy(), batch)
+            # loguru_logger.info(f"batch:{batch}")
+
             self._cpprb.add(**batch)
-        print("Done")
+        loguru_logger.info("Done")
 
     def _push_to_cpprb(self):
         self._cpprb.add(**self._sequence_buffer)

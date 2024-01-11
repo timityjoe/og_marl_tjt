@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from og_marl.offline_dataset import download_and_unzip_dataset
+from og_marl.offline_dataset import download_and_unzip_dataset, download_flashbax_dataset
 from og_marl.environments import smacv1
 from og_marl.offline_dataset import OfflineMARLDataset
 
@@ -31,10 +31,16 @@ from og_marl.offline_dataset import OfflineMARLDataset
 
 
 # Comment this out if you already downloaded the dataset
-# download_and_unzip_dataset("smac_v1", "3m", dataset_base_dir="datasets")
+download_and_unzip_dataset("smac_v1", "3m", dataset_base_dir="datasets")
+# Download the dataset
+# download_flashbax_dataset(
+#     env_name="smac_v1", 
+#     scenario_name="8m",
+#     base_dir="datasets/flashbax"
+# )
 
 # Compute mean episode return of Good dataset
-env = smacv1.SMACv1("3m") # Change SMAC Scenario Here
+env = smacv1.SMACv1("8m") # Change SMAC Scenario Here
 dataset = OfflineMARLDataset(env, f"datasets/smac_v1/8m/Good")
 
 sample_cnt =0
