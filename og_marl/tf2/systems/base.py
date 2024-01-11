@@ -78,9 +78,9 @@ class BaseMARLSystem:
             self.reset() # reset the system
 
             # Mod by Tim: TODO Resolve random key input, to reset(key)
-            # observations = self._environment.reset()
-            state_key, action_key1, action_key2 = random.split(random.PRNGKey(10), 3)
-            observations = self._environment.reset(state_key)
+            observations = self._environment.reset()
+            # state_key, action_key1, action_key2 = random.split(random.PRNGKey(10), 3)
+            # observations = self._environment.reset(state_key)
 
             if isinstance(observations, tuple):
                 observations, infos = observations
