@@ -99,6 +99,7 @@ class OfflineMARLDataset:
             
         sample["mask"] = example["zero_padding_mask"]
         sample["state"] = example["env_state"]
+        sample["episode_return"] = example["episode_return"]
 
         return sample
 
