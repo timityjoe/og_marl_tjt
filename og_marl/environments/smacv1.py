@@ -18,6 +18,13 @@ from og_marl.environments.base import BaseEnvironment
 from smac.env import StarCraft2Env
 from gymnasium.spaces import Discrete, Box
 
+
+from loguru import logger as loguru_logger
+# loguru_logger.remove()
+# loguru_logger.add(sys.stdout, level="INFO")
+# loguru_logger.add(sys.stdout, level="SUCCESS")
+# loguru_logger.add(sys.stdout, level="WARNING")
+
 class SMACv1(BaseEnvironment):
     """Environment wrapper SMACv1."""
 
@@ -31,6 +38,8 @@ class SMACv1(BaseEnvironment):
         self._num_agents = len(self.possible_agents)
         self._num_actions = self._environment.n_actions
         self._obs_dim = self._environment.get_obs_size()
+
+        loguru_logger.info(f"self._num_actions:{self._num_actions}, type{type(self._num_actions)}")
 
         self.action_spaces = {agent: Discrete(self._num_actions) for agent in self.possible_agents}
         self.observation_spaces = {agent: Box(-np.inf, np.inf, (self._obs_dim,)) for agent in self.possible_agents}
