@@ -16,8 +16,8 @@
 import tensorflow as tf
 import sonnet as snt
 
-from og_marl_tjt_old.og_marl.tf2.systems.idrqn import IDRQNSystem
-from og_marl_tjt_old.og_marl.tf2.utils import (
+from og_marl_tjt.og_marl.tf2.systems.idrqn import IDRQNSystem
+from og_marl_tjt.og_marl.tf2.utils import (
     gather,
     batch_concat_agent_id_to_obs,
     switch_two_leading_dims,

@@ -18,8 +18,8 @@ import tensorflow as tf
 import sonnet as snt
 import tree
 
-from og_marl_tjt_old.og_marl.tf2.systems.base import BaseMARLSystem
-from og_marl_tjt_old.og_marl.tf2.utils import (
+from og_marl_tjt.og_marl.tf2.systems.base import BaseMARLSystem
+from og_marl_tjt.og_marl.tf2.utils import (
     batched_agents,
     gather,
     batch_concat_agent_id_to_obs,
@@ -105,6 +105,10 @@ class IDRQNSystem(BaseMARLSystem):
     def select_actions(self, observations, legal_actions=None, explore=True):
         if explore:
             self._env_step_ctr += 1.0
+
+        loguru_logger.info(f"legal_actions:{legal_actions}")
+        # loguru_logger.info(f"observations:{observations}")
+        loguru_logger.info(f"self._env_step_ctr:{self._env_step_ctr}")
 
         env_step_ctr, observations, legal_actions = tree.map_structure(tf.convert_to_tensor, (self._env_step_ctr, observations, legal_actions))
         actions, next_rnn_states = self._tf_select_actions(env_step_ctr, observations, legal_actions, self._rnn_states, explore)
