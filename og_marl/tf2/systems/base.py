@@ -15,11 +15,15 @@
 import numpy as np
 import time
 
-from og_marl_tjt_old.og_marl.loggers import JsonWriter
+from og_marl_tjt.og_marl.loggers import JsonWriter
 
 # Mod by Tim:
-import jax
 from jax import random
+from loguru import logger
+# logger.remove()
+# logger.add(sys.stdout, level="INFO")
+# logger.add(sys.stdout, level="SUCCESS")
+# logger.add(sys.stdout, level="WARNING")
 
 class BaseMARLSystem:
     def __init__(
@@ -95,7 +99,13 @@ class BaseMARLSystem:
                     legal_actions = None
 
                 start_time = time.time()
-                actions = self.select_actions(observations, legal_actions)
+
+                # Mod by Tim:
+                # actions = self.select_actions(observations, legal_actions)
+                logger.info(f"self._environment.agents_view:{self._environment.agents_view}")
+                logger.info(f"self._environment._get_legal_actions():{self._environment._get_legal_actions()}")
+                actions = self.select_actions(self._environment.agents_view, self._environment._get_legal_actions())
+
                 end_time = time.time()
                 time_for_action_selection = (end_time - start_time)
 

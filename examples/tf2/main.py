@@ -48,12 +48,17 @@ def main(_):
 
     env = get_environment(FLAGS.env, FLAGS.scenario)
 
+    # Mod by Tim:
+    # dataset = OfflineMARLDataset(env, f"datasets/{FLAGS.env}/{FLAGS.scenario}/{FLAGS.dataset}")
+    # loguru_logger.info(f"datasets/{FLAGS.env}/{FLAGS.scenario}/{FLAGS.dataset}")
+    dataset = OfflineMARLDataset(env, f"datasets/{FLAGS.env}/{FLAGS.scenario}/{FLAGS.dataset}")
     loguru_logger.info(f"datasets/{FLAGS.env}/{FLAGS.scenario}/{FLAGS.dataset}")
 
-    dataset = OfflineMARLDataset(env, f"datasets/{FLAGS.env}/{FLAGS.scenario}/{FLAGS.dataset}")
     dataset_sequence_length = dataset.get_sequence_length()
     
     batched_dataset = SequenceCPPRB(env, max_size=FLAGS.num_offline_sequences, batch_size=FLAGS.batch_size, sequence_length=dataset_sequence_length)
+    loguru_logger.info(f"max_size:{FLAGS.num_offline_sequences} batch_size:{FLAGS.batch_size} sequence_length:{dataset_sequence_length} env:{env}")
+    loguru_logger.info(f"batched_dataset:{batched_dataset} ")
 
     batched_dataset.populate_from_dataset(dataset)
 
