@@ -116,6 +116,9 @@ def concat_agent_id_to_obs(obs, agent_id, N):
     if not is_vector_obs and len(obs.shape) == 2:  # if no channel dim
         obs = tf.expand_dims(obs, axis=-1)
 
+    # Mod by Tim: TODO "Get past Tensors in list passed to 'values' of 'ConcatV2' Op have types [float32, int32]"
+    obs = tf.cast(obs, dtype = tf.float32)
+
     obs = tf.concat([agent_id, obs], axis=-1)
 
     return obs

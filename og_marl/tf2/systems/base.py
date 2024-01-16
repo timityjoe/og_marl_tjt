@@ -102,9 +102,7 @@ class BaseMARLSystem:
 
                 # Mod by Tim:
                 # actions = self.select_actions(observations, legal_actions)
-                logger.info(f"self._environment.agents_view:{self._environment.agents_view}")
-                logger.info(f"self._environment._get_legal_actions():{self._environment._get_legal_actions()}")
-                actions = self.select_actions(self._environment.agents_view, self._environment._get_legal_actions())
+                actions = self.select_actions(self._environment._observations.agents_view, self._environment._get_legal_actions())
 
                 end_time = time.time()
                 time_for_action_selection = (end_time - start_time)
