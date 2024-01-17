@@ -18,6 +18,7 @@ import time
 from og_marl_tjt.og_marl.loggers import JsonWriter
 
 # Mod by Tim:
+import jax
 from jax import random
 from loguru import logger
 # logger.remove()
@@ -78,18 +79,26 @@ class BaseMARLSystem:
     def train_online(self, replay_buffer, max_env_steps=1e6, train_period=20):
         """Method to train the system online."""
         episodes = 0
+
         while True: # breaks out when env_steps > max_env_steps
             self.reset() # reset the system
 
             # Mod by Tim: TODO Resolve random key input, to reset(key)
             # observations = self._environment.reset()
-            state_key, action_key1, action_key2 = random.split(random.PRNGKey(10), 3)
-            observations = self._environment.reset(state_key)
+            # state_key, action_key1, action_key2 = random.split(random.PRNGKey(10), 3)
+            key = jax.random.PRNGKey(10)
+            logger.info(f"key:{key} key.ndim:{key.ndim}")
 
-            if isinstance(observations, tuple):
-                observations, infos = observations
-            else:
-                infos = {}
+            # observations = self._environment.reset(key)
+            # observations, timestep = self._environment.reset(key)
+            # if isinstance(observations, tuple):
+            #     observations, infos = observations
+            # else:
+            #     infos = {}
+
+            state, timestep = jax.jit(self._environment.reset)(key)
+            observations = self._environment._observations
+            infos = self._environment._info
             
             episode_return = 0
             while True:

@@ -46,11 +46,13 @@ class IDRQNSystem(BaseMARLSystem):
         self,
         environment,
         logger,
-        # Mod by Tim:
-        # linear_layer_dim=64,
-        # recurrent_layer_dim=64,
-        linear_layer_dim=66,
-        recurrent_layer_dim=66,
+
+        # Mod by Tim: Match size of len(agent_observation) - (1, 70)
+        linear_layer_dim=64,
+        recurrent_layer_dim=64,
+        # linear_layer_dim=70,
+        # recurrent_layer_dim=70,
+        
         discount=0.99,
         target_update_period=200,
         learning_rate=3e-4,
@@ -110,14 +112,14 @@ class IDRQNSystem(BaseMARLSystem):
             self._env_step_ctr += 1.0
 
         loguru_logger.info(f"legal_actions:{legal_actions}")
-        # loguru_logger.info(f"observations:{observations}")
+        loguru_logger.info(f"observations:{observations}")
         loguru_logger.info(f"self._env_step_ctr:{self._env_step_ctr}")
 
         env_step_ctr, observations, legal_actions = tree.map_structure(tf.convert_to_tensor, (self._env_step_ctr, observations, legal_actions))
 
-        # loguru_logger.info(f"len observations:{len(observations)}")
-        # loguru_logger.info(f"len legal_actions:{len(legal_actions)}")
-        # loguru_logger.info(f"len self._rnn_states:{len(self._rnn_states)}")
+        loguru_logger.info(f"len observations:{len(observations)}")
+        loguru_logger.info(f"len legal_actions:{len(legal_actions)}")
+        loguru_logger.info(f"len self._rnn_states:{len(self._rnn_states)}")
         actions, next_rnn_states = self._tf_select_actions(env_step_ctr, observations, legal_actions, self._rnn_states, explore)
         
         self._rnn_states = next_rnn_states
@@ -134,21 +136,26 @@ class IDRQNSystem(BaseMARLSystem):
             agent_id = int(agent)
             agent_observation = observations[agent_id]
 
-
             loguru_logger.info(f"agent_observation:{agent_observation} type:{type(agent_observation)}")
 
             if self._add_agent_id_to_obs:
                 agent_observation = concat_agent_id_to_obs(agent_observation, i, len(self._environment.possible_agents))
-
-
             agent_observation = tf.expand_dims(agent_observation, axis=0) # add batch dimension
 
-            # loguru_logger.info(f"agent:{agent} type:{type(agent)}")
-            # loguru_logger.info(f"rnn_states:{rnn_states}")
-            # loguru_logger.info(f"rnn_states[agent]:{rnn_states[agent]}")
+            loguru_logger.info(f"agent:{agent} type:{type(agent)}")
+            loguru_logger.info(f"rnn_states:{rnn_states}, len:{len(rnn_states)}")
+            loguru_logger.info(f"rnn_states[agent]:{rnn_states[agent]} len:{len(rnn_states[agent])}")
+            loguru_logger.info(f"agent_observation:{agent_observation} len:{len(agent_observation)}")
+            # loguru_logger.info(f"rnn_states[agent_id]:{rnn_states[agent_id]}")
+
             # Mod by Tim:
             # q_values, next_rnn_states[agent] = self._q_network(agent_observation, rnn_states[agent])
+            q_values, next_rnn_states[agent] = self._q_network(agent_observation, rnn_states[agent])
+            loguru_logger.info(f"next_rnn_states[agent]:{next_rnn_states[agent]} ")
+
+
             agent_legal_actions = legal_actions[agent_id]
+            loguru_logger.info(f"(agent_legal_actions, 1):{(agent_legal_actions, 1)}")
 
             masked_q_values = tf.where(
                 tf.equal(agent_legal_actions, 1),
