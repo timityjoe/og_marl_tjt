@@ -21,8 +21,6 @@ import zipfile
 import os
 import requests
 
-# Sample = namedtuple('Sample', ['observations', 'actions', 'rewards', 'done', 'episode_return', 'legal_actions', 'env_state', 'zero_padding_mask'])
-
 def get_schema_dtypes(environment):
     act_type = list(environment.action_spaces.values())[0].dtype
     schema = {}
