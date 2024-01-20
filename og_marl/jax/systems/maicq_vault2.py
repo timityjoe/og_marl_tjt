@@ -12,25 +12,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Sequence
-import time
 import copy
-import wandb
-import jax
+import time
+from typing import Sequence
+
 import chex
+import flashbax as fbx
+import jax
+import jax.numpy as jnp
+import jax.random as jrand
+import jumanji
 import optax
 import tree
-import jax.numpy as jnp
-from flax import linen as nn
-import flashbax as fbx
 from flashbax.buffers.trajectory_buffer import TrajectoryBufferState
+from flashbax.vault import Vault
+from flax import linen as nn
+from jumanji.environments.routing.robot_warehouse.generator import RandomGenerator
 
-from og_marl_tjt.og_marl.jax.dataset import FlashbaxBufferStore
+import wandb
+from og_marl_tjt.og_marl.jax.jumanji_wrappers import AgentIDWrapper, LogWrapper, RwareWrapper
+
+# Mod by Tim:
+from tqdm import tqdm
+from loguru import logger as loguru_logger
+# loguru_logger.remove()
+# loguru_logger.add(sys.stdout, level="INFO")
+# loguru_logger.add(sys.stdout, level="SUCCESS")
+# loguru_logger.add(sys.stdout, level="WARNING")
+
 
 def train_maicq_system(
-    environment,
     logger,
-    dataset_path,
     seed: int = 42,
     learning_rate: float = 3e-4,
     batch_size: float = 32,
@@ -50,8 +62,9 @@ def train_maicq_system(
     json_writer=None
 ):
     # GLOBAL Variables
-    NUM_ACTS = environment._num_actions
-    NUM_AGENTS = len(environment.possible_agents)
+    NUM_ACTS = 5
+    NUM_AGENTS = 4
+    SEQUENCE_LENGTH = 20
     SEED = seed
     LR = learning_rate
     BATCH_SIZE = batch_size
@@ -68,29 +81,28 @@ def train_maicq_system(
     MAICQ_TARGET_BETA = maicq_target_beta
     MIXER_EMBED_DIM = qmixer_embed_dim
     MIXER_HYPER_DIM = qmixer_hyper_dim
-    DATASET_PATH = dataset_path
 
-    # Get sequence length from dataset metadata
-    store = FlashbaxBufferStore(DATASET_PATH)
-    dataset_metadata = store.restore_metadata()
-    SEQUENCE_LENGTH = dataset_metadata["sequence_length"]
+    # Create envs
+    def make_env():
+        loguru_logger.info("make_env")
+        task_config = {"column_height": 8, "shelf_rows": 2, "shelf_columns": 3, "num_agents": 4, "sensor_range": 1, "request_queue_size": 4}
+        generator = RandomGenerator(**task_config)
+        env = jumanji.make("RobotWarehouse-v0", generator=generator)
+        env = RwareWrapper(env)
+        env = AgentIDWrapper(env)
+        env = LogWrapper(env)
+        return env
 
-
-    def stack_agents(state, agents):
-        experience = {"obs": [], "act": [], "rew": [], "done": [], "legals": []}
-        for agent in agents:
-            experience["obs"].append(state.experience[f"{agent}_observations"])
-            experience["act"].append(state.experience[f"{agent}_actions"])
-            experience["rew"].append(state.experience[f"{agent}_rewards"])
-            experience["done"].append(state.experience[f"{agent}_done"])
-            experience["legals"].append(state.experience[f"{agent}_legals"])
-        experience["obs"] = jnp.stack(experience["obs"], axis=2)
-        experience["act"] = jnp.stack(experience["act"], axis=2)
-        experience["rew"] = jnp.stack(experience["rew"], axis=2)
-        experience["done"] = jnp.stack(experience["done"], axis=2)
-        experience["legals"] = jnp.stack(experience["legals"], axis=2)
-        experience["mask"] = state.experience["mask"]
-        experience["env_state"] = state.experience["state"]
+    def transform_buffer_state(state):
+        loguru_logger.info("transform_buffer_state")
+        experience = {}
+        experience["obs"] = state.experience["observation"]
+        experience["act"] = state.experience["action"]
+        experience["rew"] = state.experience["reward"]
+        experience["done"] = state.experience["done"]
+        experience["legals"] = state.experience["legal_action_mask"]
+        experience["mask"] = jnp.ones((*experience["act"].shape[:2],))
+        experience["env_state"] = jnp.reshape(state.experience["observation"], (*state.experience["observation"].shape[:2],-1))
         state = TrajectoryBufferState(experience=experience, is_full=state.is_full, current_index=state.current_index)
         return state
 
@@ -100,16 +112,24 @@ def train_maicq_system(
         output_size: int
 
         @nn.compact
-        def __call__(self, carry, inputs):
+        def __call__(self, carry, inputs, done):
             dense_layers = [nn.Dense(size) for size in self.dense_layer_sizes]
             x = inputs
             for layer in dense_layers:
                 x = layer(x)
                 x = nn.relu(x)
             carry, x = nn.GRUCell(self.gru_hidden_size)(carry, x)
+            x = nn.relu(x)
 
             # Final dense layer for output
             output = nn.Dense(self.output_size)(x)
+
+            # Maybe reinitialise carry
+            carry = jnp.where(
+                jnp.expand_dims(done, axis=-1),
+                self.initialize_carry(CRITIC_GRU_LAYER_SIZE, inputs.shape),
+                carry,
+            )
             
             return carry, output
 
@@ -183,16 +203,16 @@ def train_maicq_system(
             
             return k
 
-    def unroll_policy(params, obs_seq):
-        f = lambda carry, obs: Network(POLICY_LAYER_SIZES, POLICY_GRU_LAYER_SIZE, NUM_ACTS).apply(params, carry, obs)
+    def unroll_policy(params, obs_seq, done_seq):
+        f = lambda carry, inputs: Network(POLICY_LAYER_SIZES, POLICY_GRU_LAYER_SIZE, NUM_ACTS).apply(params, carry, inputs[0], inputs[1])
         init_carry = Network(POLICY_LAYER_SIZES, POLICY_GRU_LAYER_SIZE, NUM_ACTS).initialize_carry(POLICY_GRU_LAYER_SIZE, obs_seq.shape[1:])
-        carry, logits = jax.lax.scan(f, init_carry, obs_seq)
+        carry, logits = jax.lax.scan(f, init_carry, (obs_seq, done_seq))
         return logits
 
-    def unroll_critic(params, obs_seq):
-        f = lambda carry, obs: Network(CRITIC_LAYER_SIZES, CRITIC_GRU_LAYER_SIZE, NUM_ACTS).apply(params, carry, obs)
+    def unroll_critic(params, obs_seq, done_seq):
+        f = lambda carry, inputs: Network(CRITIC_LAYER_SIZES, CRITIC_GRU_LAYER_SIZE, NUM_ACTS).apply(params, carry, inputs[0], inputs[1])
         init_carry = Network(CRITIC_LAYER_SIZES, CRITIC_GRU_LAYER_SIZE, NUM_ACTS).initialize_carry(CRITIC_GRU_LAYER_SIZE, obs_seq.shape[1:])
-        carry, q_values = jax.lax.scan(f, init_carry, obs_seq)
+        carry, q_values = jax.lax.scan(f, init_carry, (obs_seq, done_seq))
         return q_values
 
     def maicq_loss(params, target_params, obs, act, rew, done, legals, env_state, mask):
@@ -208,10 +228,12 @@ def train_maicq_system(
         # Collaps agent dim into batch dim
         obs = jnp.swapaxes(obs, 1, 2)
         obs = jnp.reshape(obs, (B*N, T, obs.shape[-1])) # (B*N,T,O)
+        batched_done = jnp.swapaxes(done, 1, 2)
+        batched_done = jnp.reshape(batched_done, (B*N, T)) # (B*N,T)
 
-        logits = jax.vmap(unroll_policy, (None,0))(params["policy"], obs)
-        q_values = jax.vmap(unroll_critic, (None,0))(params["critic"], obs)
-        target_q_values = jax.vmap(unroll_critic, (None,0))(target_params["critic"], obs)
+        logits = jax.vmap(unroll_policy, (None,0,0))(params["policy"], obs, batched_done)
+        q_values = jax.vmap(unroll_critic, (None,0,0))(params["critic"], obs, batched_done)
+        target_q_values = jax.vmap(unroll_critic, (None,0,0))(target_params["critic"], obs, batched_done)
 
         (logits, q_values, target_q_values) = jax.tree_map(lambda x: jnp.swapaxes(jnp.reshape(x, (B,N,T, x.shape[2])), 1,2), (logits, q_values, target_q_values))
 
@@ -225,7 +247,7 @@ def train_maicq_system(
         # Compute advantage
         action_value = jnp.sum(q_values * nn.one_hot(act, NUM_ACTS), axis=-1)
         baseline = jnp.sum(probs * q_values, axis=-1)
-        advantage = action_value - baseline # TODO: stop gradient
+        advantage = action_value - baseline
         advantage = nn.softmax(advantage / MAICQ_ADVANTAGE_BETA, axis=0)
         advantage = jax.lax.stop_gradient(advantage)
 
@@ -259,18 +281,21 @@ def train_maicq_system(
 
         loss = critic_loss + policy_loss
 
-        return loss, {"policy_loss": policy_loss, "critic_loss": critic_loss}
+        return loss, {"policy_loss": policy_loss, "critic_loss": critic_loss, "q_vals": jnp.mean(q_values)}
 
     @jax.jit
     @chex.assert_max_traces(n=1)
     def train_epoch(rng_key, params, opt_state, buffer_state):
+        loguru_logger.info("train_epoch")
         buffer = fbx.make_trajectory_buffer(
-            max_length_time_axis=10_000_000, # NOTE: we set this to an arbitrary large number > buffer_state.current_index.
-            min_length_time_axis=BATCH_SIZE,
-            sample_batch_size=BATCH_SIZE,
+            # Unused when reload:
             add_batch_size=1,
+            max_length_time_axis=SEQUENCE_LENGTH,
+            min_length_time_axis=SEQUENCE_LENGTH,
+            # Important:
+            period=1, # or 1?
+            sample_batch_size=BATCH_SIZE,
             sample_sequence_length=SEQUENCE_LENGTH,
-            period=SEQUENCE_LENGTH
         )
         optim = optax.chain(optax.clip_by_global_norm(10), optax.adam(LR))
 
@@ -301,44 +326,33 @@ def train_maicq_system(
         params, opt_state, buffer_state = carry
         return params, opt_state, logs
 
-    def select_actions(carry, params, obs, legals):
+    @jax.jit
+    def select_actions(carry, params, obs, legals, done):
+        loguru_logger.info("select_actions")
         policy = Network(POLICY_LAYER_SIZES, POLICY_GRU_LAYER_SIZE, NUM_ACTS)
-        carry, logits = policy.apply(params, carry, obs)
+        carry, logits = policy.apply(params, carry, obs, done)
         logits = jnp.where(legals, logits, -99999999.) # Legal action masking
         act = jnp.argmax(logits, axis=-1)
         return carry, act
 
-    def stack(obs, agents):
-        stacked_obs = []
-        for agent in agents:
-            stacked_obs.append(obs[agent])
-        stacked_obs = tree.map_structure(lambda x: jnp.array(x), stacked_obs)
-        stacked_obs = jnp.stack(stacked_obs)
-        return stacked_obs
-
-    def unstack(stacked_values, agents):
-        unstacked = {}
-        for i, agent in enumerate(agents):
-            unstacked[agent] = int(stacked_values[i])
-        return unstacked
-
-    def evaluation(init_carry, params, environment):
+    def evaluation(rng_key, init_carry, params, env_reset_fn, env_step_fn):
+        loguru_logger.info("evaluation() start...")
         episode_returns = []
         for e in range(NUM_EVALS):
+            rng_key, eval_key = jax.random.split(rng_key, 2)
+            env_state, timestep = env_reset_fn(eval_key)
             episode_return = 0
-            done = False
-            obs, info = environment.reset()
+            done = jnp.array(False)
             carry = init_carry
             while not done:
-                obs = stack(obs, environment.possible_agents)
-                legals = stack(info["legals"], environment.possible_agents)
-                carry, act = jax.jit(select_actions)(carry, params, obs, legals)
-                act = unstack(act, environment.possible_agents)
+                obs = timestep.observation.agents_view
+                legals = timestep.observation.action_mask
+                carry, act = select_actions(carry, params, obs, legals, done)
 
-                obs, rew, term, trunc, info = environment.step(act)
+                env_state, timestep = env_step_fn(env_state, act)
 
-                done = all(trunc.values()) or all(term.values())
-                episode_return += sum(list(rew.values())) / len(list(rew.values())) # mean over agents
+                done = timestep.last()
+                episode_return += jnp.mean(timestep.reward)
             episode_returns.append(episode_return)
         return {"evaluator/episode_return": sum(episode_returns)/NUM_EVALS}
 
@@ -346,23 +360,37 @@ def train_maicq_system(
     ##### MAIN #####
     ################
     config = {"backend": "jax"}
-    wandb.init(project="benchmark-jax-og-marl", entity="claude_formanek", config=config)
+    # wandb.init(project="benchmark-jax-og-marl", entity="claude_formanek", config=config)
+    wandb.init(project="rware-og-marl", entity="timityjoe", config=config)
     rng_key = jax.random.PRNGKey(SEED)
 
     # Restore Dataset
-    store = FlashbaxBufferStore(DATASET_PATH)
-    buffer_state = store.restore_state()
-    buffer_state = stack_agents(buffer_state, environment.possible_agents)
+    loguru_logger.info("1) Restore Dataset")
+
+    # Mod by Tim:
+    # vault = Vault(vault_name="ff_ippo_rware_small-4ag", vault_uid="20231212080255")
+    vault = Vault(vault_name="ff_ippo_rware", vault_uid="20240120165454")
+    
+    buffer_state = vault.read(percentiles=(80, 100))
+    buffer_state = transform_buffer_state(buffer_state)
+
+    # Make the environment for evaluation
+    loguru_logger.info("2) Make the environment")
+    env = make_env()
+    env_step_fn = jax.jit(env.step)
+    env_reset_fn = jax.jit(env.reset)
 
     # Initialise Network Parameters
+    loguru_logger.info("3) Initialise Network Parameters")
     dummy_obs = buffer_state.experience["obs"][0,0]
+    dummy_done = jnp.array([False] * NUM_AGENTS)
     dumm_env_state = buffer_state.experience["env_state"][0,0]
     policy = Network(POLICY_LAYER_SIZES, POLICY_GRU_LAYER_SIZE, NUM_ACTS)
     init_policy_carry = policy.initialize_carry(POLICY_GRU_LAYER_SIZE, dummy_obs.shape)
-    policy_params = policy.init(rng_key, init_policy_carry, dummy_obs)
+    policy_params = policy.init(rng_key, init_policy_carry, dummy_obs, dummy_done)
     critic = Network(CRITIC_LAYER_SIZES, CRITIC_GRU_LAYER_SIZE, NUM_ACTS)
     init_critic_carry = critic.initialize_carry(CRITIC_GRU_LAYER_SIZE, dummy_obs.shape)
-    critic_params = critic.init(rng_key, init_critic_carry, dummy_obs)
+    critic_params = critic.init(rng_key, init_critic_carry, dummy_obs, dummy_done)
     dummy_multi_agent_qvals = jnp.ones((BATCH_SIZE,SEQUENCE_LENGTH,NUM_AGENTS))
     dummy_multi_dim_env_state = jnp.ones((BATCH_SIZE,SEQUENCE_LENGTH,dumm_env_state.shape[0]))
     mixer = QMIXER(NUM_AGENTS, MIXER_EMBED_DIM, MIXER_HYPER_DIM)
@@ -373,10 +401,17 @@ def train_maicq_system(
         "target": {"critic": copy.deepcopy(critic_params), "mixer": copy.deepcopy(mixer_params)}
     }
 
+    loguru_logger.info("4) Optax Chain")
     opt_state = optax.chain(optax.clip_by_global_norm(10), optax.adam(LR)).init(params["online"])
 
-    for i in range(NUM_EPOCHS):
-        eval_logs = evaluation(init_policy_carry, params["online"]["policy"], environment)
+    loguru_logger.info("5) Run Epoch")
+    # for i in range(NUM_EPOCHS):
+    # for i in tqdm(range(NUM_EPOCHS)):
+
+    pbar = tqdm(range(NUM_EPOCHS))
+    for i in pbar:
+        rng_key, train_key, eval_key = jax.random.split(rng_key, 3)
+        eval_logs = evaluation(eval_key, init_policy_carry, params["online"]["policy"], env_reset_fn, env_step_fn)
         logger.write(eval_logs, force=True)
         if json_writer is not None:
             json_writer.write(
@@ -387,17 +422,19 @@ def train_maicq_system(
             )
 
         start_time = time.time()
-        rng_key, train_key = jax.random.split(rng_key)
         params, opt_state, logs = train_epoch(train_key, params, opt_state, buffer_state)
         end_time = time.time()
 
-        logs["critic_loss"] = jnp.mean(logs["critic_loss"])
-        logs["policy_loss"] = jnp.mean(logs["policy_loss"])
+        logs = tree.map_structure(lambda x: jnp.mean(x), logs)
         logs["Trainer Steps"] = (i+1) * NUM_TRAIN_STEPS_PER_EPOCH
         if i != 0: # don't log SPC when tracing
             logs["Train SPS"] = 1 / ((end_time - start_time) / NUM_TRAIN_STEPS_PER_EPOCH)
 
-    eval_logs = evaluation(init_policy_carry, params["online"]["policy"], environment)
+        logger.write(logs)
+        pbar.set_description(f"Step:{i} of {NUM_EPOCHS}")
+
+    loguru_logger.info("6) Run Evaluation")
+    eval_logs = evaluation(rng_key, init_policy_carry, params["online"]["policy"], env_reset_fn, env_step_fn)
     logger.write(eval_logs, force=True)
     if json_writer is not None:
         eval_logs = {f"absolute/{key.split('/')[1]}": value for key, value in eval_logs.items()}
@@ -408,4 +445,4 @@ def train_maicq_system(
             i
         )
 
-    print("Done")
+    loguru_logger.info("Done!")
